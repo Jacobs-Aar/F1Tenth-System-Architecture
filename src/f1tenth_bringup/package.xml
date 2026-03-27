@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <n>f1tenth_bringup</n>
+  <version>0.1.0</version>
+  <description>Launch files and config for the complete F1Tenth autonomous stack.</description>
+  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!-- Packages this launch file starts -->
+  <exec_depend>vision_perception</exec_depend>
+  <exec_depend>control_planning</exec_depend>
+  <exec_depend>vesc_driver</exec_depend>
+  <exec_depend>vesc_ackermann</exec_depend>
+  <exec_depend>zed_wrapper</exec_depend>
+
+  <exec_depend>ros2launch</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

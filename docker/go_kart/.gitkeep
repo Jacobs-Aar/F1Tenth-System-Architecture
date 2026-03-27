@@ -1,0 +1,2 @@
+# This directory is reserved for go-kart Docker configurations.
+# It will be populated when the stack is migrated from F1Tenth to the full-scale go-kart.

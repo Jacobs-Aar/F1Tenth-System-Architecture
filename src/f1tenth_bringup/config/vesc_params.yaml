@@ -1,0 +1,55 @@
+# =============================================================================
+# config/vesc_params.yaml
+# =============================================================================
+# F1Tenth VESC driver configuration.
+# All values marked !! CALIBRATE !! MUST be measured on the physical car.
+#
+# How to calibrate speed_to_erpm_gain:
+#   1. Command the car at 1.0 m/s via /drive
+#   2. Read ERPM from /sensors/core (vesc_driver topic)
+#   3. speed_to_erpm_gain = measured_erpm / 1.0
+#
+# How to calibrate steering:
+#   1. Command 0 rad steering -> adjust offset so wheels are straight
+#   2. Command max physical steer -> adjust gain so value matches real angle
+# =============================================================================
+
+# -- vesc_driver: low-level VESC serial communication -------------------------
+vesc_driver:
+  ros__parameters:
+    port: /dev/ttyACM0        # USB port to VESC -- confirm with: ls /dev/ttyACM*
+    duty_cycle_min: -1.0
+    duty_cycle_max:  1.0
+    current_min: -100.0
+    current_max:  100.0
+    brake_min: 0.0
+    brake_max: 100000.0
+    speed_min: -10000.0       # ERPM limits (safety bounds)
+    speed_max:  10000.0
+    position_min: 0.0
+    position_max: 100.0
+    servo_min: 0.0
+    servo_max: 1.0
+
+# -- ackermann_to_vesc: converts /drive -> VESC speed + servo -----------------
+ackermann_to_vesc:
+  ros__parameters:
+    # !! CALIBRATE !!  ERPM per m/s  (typical F1Tenth: ~4614)
+    speed_to_erpm_gain:   4614.0
+    speed_to_erpm_offset: 0.0
+
+    # !! CALIBRATE !!  Servo units per radian of steering angle
+    # Negative gain = servo increases as steering angle decreases (common)
+    steering_angle_to_servo_gain:   -1.2135
+    # Servo value for straight-ahead (0.5 = mid-range)
+    steering_angle_to_servo_offset:  0.5304
+
+# -- kart_controller: control algorithm parameters ----------------------------
+kart_controller:
+  ros__parameters:
+    speed_nominal:   1.0     # m/s -- start slow, increase after validation
+    kp_lateral:      0.8     # proportional gain on lateral error
+    kd_lateral:      0.05    # derivative gain on lateral error (damping)
+    kp_heading:      0.5     # proportional gain on heading error
+    max_steer_angle: 0.34    # radians -- hard clamp (~20 degrees)
+    min_quality:     0.4     # detection quality threshold (0-1)

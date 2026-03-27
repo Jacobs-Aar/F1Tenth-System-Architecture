@@ -1,0 +1,37 @@
+# ROS 2 build artifacts
+build/
+install/
+log/
+.colcon/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+.eggs/
+
+# C++
+*.o
+*.so
+*.a
+*.d
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/f1tenth/*.log
+
+# ROS bags (can be large)
+*.db3
+*.mcap
