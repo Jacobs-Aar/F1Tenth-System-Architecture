@@ -1,60 +1,23 @@
 # =============================================================================
 # docker/f1tenth/docker-compose.yml
 # =============================================================================
-# Usage (from this directory):
-#   docker compose build           <- build image once (takes ~10 min first time)
-#   docker compose up -d           <- start container in background
-#   docker exec -it f1tenth_stack bash  <- open a shell inside
-#
-# FIRST TIME inside the container:
-#   cd /ros2_ws
-#   colcon build --symlink-install
-#   source install/setup.bash
-#   ros2 launch f1tenth_bringup f1tenth_stack.launch.py
-#
-# --symlink-install means Python changes are live immediately.
-# C++ changes (kart_controller.cpp) still require a colcon rebuild.
-# =============================================================================
-
-version: '3.8'
 
 services:
   f1tenth_stack:
     build:
-      # Build context = repo root so Docker can see src/ and docker/ together
       context: ../../
       dockerfile: docker/f1tenth/Dockerfile
     container_name: f1tenth_stack
 
-    # -- GPU access (required for ZED SDK + CUDA) ----------------------------
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu, compute, utility, video]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    runtime: nvidia
 
-    # -- Volume: mount your src/ folder live into the container workspace -----
-    # Edit code on the host -> changes are instantly visible inside the container
-    # without rebuilding the Docker image.
     volumes:
       - ../../src:/ros2_ws/src
 
-    # -- Hardware pass-through ------------------------------------------------
-    # ZED camera connects via USB, VESC via serial USB
-    # If your VESC shows up on a different port, update ttyACM0 accordingly.
-    devices:
-      - "/dev/bus/usb:/dev/bus/usb"      # ZED 2i (USB 3.0)
-      - "/dev/ttyACM0:/dev/ttyACM0"      # VESC serial port
-
-    # -- Networking -----------------------------------------------------------
-    # host mode = container shares the Jetson's network interface
-    # This is the simplest way to let ROS 2 DDS discovery work normally.
     network_mode: "host"
-
-    # privileged gives full hardware access (needed for ZED USB on Jetson)
     privileged: true
-
     tty: true
     stdin_open: true

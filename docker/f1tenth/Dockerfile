@@ -1,62 +1,108 @@
 # =============================================================================
 # docker/f1tenth/Dockerfile
 # =============================================================================
-# Target:  NVIDIA Jetson with JetPack 6 (Ubuntu 22.04, L4T 36.x)
+# Target:  NVIDIA Jetson — JetPack 6.2, L4T R36.4.3, arm64
+# Base:    stereolabs/zed:5.2-devel-l4t-r36.4
 #
-# BEFORE BUILDING: Verify the correct Stereolabs base image tag for your
-#     JetPack version at: https://hub.docker.com/r/stereolabs/zed/tags
-#     Search for tags containing "ros2-humble" and "l4t36"
+# Workspace architecture (ROS 2 overlay pattern):
+#   Layer 1: /opt/ros/humble          <- ROS 2 base (apt-installed)
+#   Layer 2: /opt/f1tenth_deps        <- VESC + ZED wrapper (built from source)
+#   Layer 3: /ros2_ws                 <- YOUR code (mounted from host at runtime)
 #
-# For VM development (no Jetson / no ZED hardware):
-#   Replace the FROM line with:  FROM ros:humble-ros-base
-#   You won't be able to run the ZED node, but all other nodes will build
-#   and you can feed fake data via a ROS 2 bag file for testing.
+#   Each layer overlays the previous one. The deps in /opt/f1tenth_deps are
+#   baked into the Docker image and never affected by the src/ volume mount.
 # =============================================================================
 
-# -- Base: ZED SDK 4.2 + CUDA + ROS 2 Humble on JetPack 6 -------------------
-FROM stereolabs/zed:4.2-ros2-humble-l4t36.4.0
+FROM stereolabs/zed:5.2-devel-l4t-r36.4
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=en_US.UTF-8
 
-# -- System packages ----------------------------------------------------------
+# -- 1. Locale + basic tools --------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # ROS 2 core add-ons
+        software-properties-common \
+        curl \
+        locales \
+        gnupg2 \
+        lsb-release \
+    && locale-gen en_US en_US.UTF-8 \
+    && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
+    && rm -rf /var/lib/apt/lists/*
+
+# -- 2. Add ROS 2 Humble apt repository ---------------------------------------
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+        -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+        http://packages.ros.org/ros2/ubuntu jammy main" \
+        > /etc/apt/sources.list.d/ros2.list
+
+# -- 3. Install ROS 2 Humble + all dependencies (verified arm64) --------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-humble-ros-base \
     ros-humble-ackermann-msgs \
     ros-humble-cv-bridge \
     ros-humble-image-transport \
     ros-humble-image-transport-plugins \
     ros-humble-message-filters \
     ros-humble-sensor-msgs-py \
-    # VESC F1Tenth driver stack
-    ros-humble-vesc \
-    ros-humble-vesc-msgs \
-    ros-humble-vesc-driver \
-    ros-humble-vesc-ackermann \
-    # Build tools
+    ros-humble-serial-driver \
+    ros-humble-io-context \
+    ros-humble-asio-cmake-module \
+    ros-humble-udp-msgs \
+    libasio-dev \
+    ros-humble-xacro \
+    ros-humble-diagnostic-updater \
+    ros-humble-nmea-msgs \
+    ros-humble-geographic-msgs \
+    ros-humble-robot-localization \
+    ros-humble-backward-ros \
+    ros-humble-launch-testing-ament-cmake \
+    nlohmann-json3-dev \
     python3-colcon-common-extensions \
+    python3-rosdep \
+    python3-vcstool \
     python3-pip \
     build-essential \
     cmake \
     git \
+    tmux \
     && rm -rf /var/lib/apt/lists/*
 
-# -- Python dependencies ------------------------------------------------------
-RUN pip3 install --no-cache-dir \
-    numpy \
-    opencv-python-headless
+# -- 4. Initialise rosdep -----------------------------------------------------
+RUN rosdep init 2>/dev/null || true \
+    && rosdep update --rosdistro humble
 
-# -- Workspace setup -----------------------------------------------------------
-# The src/ directory is NOT copied here -- it is mounted at runtime via
-# docker-compose volumes so edits on the host are immediately visible
-# inside the container without rebuilding the image.
+# -- 5. Python dependencies ---------------------------------------------------
+RUN pip3 install --no-cache-dir numpy opencv-python-headless
+
+# -- 6. Build VESC + ZED wrapper into a SEPARATE permanent workspace -----------
+#    /opt/f1tenth_deps is baked into the image. The volume mount only touches
+#    /ros2_ws/src, so these dependencies are never overwritten or broken.
+RUN mkdir -p /opt/f1tenth_deps/src \
+    && cd /opt/f1tenth_deps/src \
+    && git clone https://github.com/f1tenth/vesc.git --branch ros2 \
+    && git clone --recursive https://github.com/stereolabs/zed-ros2-wrapper.git \
+    && cd /opt/f1tenth_deps \
+    && apt-get update \
+    && /bin/bash -c "source /opt/ros/humble/setup.bash && \
+       rosdep install --from-paths src --ignore-src -r -y || true && \
+       colcon build \
+           --packages-skip zed_debug \
+           --cmake-args=-DCMAKE_BUILD_TYPE=Release \
+           --parallel-workers \$(nproc)" \
+    && rm -rf /opt/f1tenth_deps/build \
+    && rm -rf /opt/f1tenth_deps/log \
+    && rm -rf /var/lib/apt/lists/*
+
+# -- 7. Prepare the user workspace --------------------------------------------
 RUN mkdir -p /ros2_ws/src
 WORKDIR /ros2_ws
 
-# -- Shell convenience ---------------------------------------------------------
-# Auto-source ROS 2 and the workspace on every new bash session
-RUN echo "source /opt/ros/humble/setup.bash"                       >> ~/.bashrc && \
-    echo "[ -f /ros2_ws/install/setup.bash ] && \
-          source /ros2_ws/install/setup.bash"                       >> ~/.bashrc && \
-    echo "echo 'ROS 2 Humble ready -- workspace: /ros2_ws'"        >> ~/.bashrc
+# -- 8. Shell convenience -----------------------------------------------------
+#    Source order matters: humble -> f1tenth_deps -> ros2_ws (overlay chain)
+RUN echo 'source /opt/ros/humble/setup.bash' >> ~/.bashrc && \
+    echo 'source /opt/f1tenth_deps/install/setup.bash' >> ~/.bashrc && \
+    echo '[ -f /ros2_ws/install/setup.bash ] && source /ros2_ws/install/setup.bash' >> ~/.bashrc && \
+    echo 'echo "=== ROS 2 Humble ready | workspace: /ros2_ws ==="' >> ~/.bashrc
 
 CMD ["/bin/bash"]
