@@ -12,14 +12,16 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='Your Name',
-    maintainer_email='your_email@example.com',
-    description='ZED 2i blue-tape lane detection node',
+    maintainer='Aaron Jacobs & Ryan Jacobs',
+    maintainer_email='aaronj0315@gmail.com & jacobsrya@gmail.com',
+    description='ZED 2i blue-tape lane detection node + SLAM + visualization',
     license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'line_mapper = vision_perception.line_mapper:main',
+            'lane_slam = vision_perception.lane_slam:main',
+            'slam_visualizer = vision_perception.slam_visualizer:main',
         ],
     },
 )

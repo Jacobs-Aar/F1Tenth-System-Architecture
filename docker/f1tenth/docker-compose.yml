@@ -7,6 +7,7 @@ services:
     build:
       context: ../../
       dockerfile: docker/f1tenth/Dockerfile
+      network: host
     container_name: f1tenth_stack
 
     environment:
@@ -16,8 +17,13 @@ services:
 
     volumes:
       - ../../src:/ros2_ws/src
+      - ../../scripts:/ros2_ws/scripts
+      - zed_resources:/usr/local/zed/resources
 
     network_mode: "host"
     privileged: true
     tty: true
     stdin_open: true
+
+volumes:
+  zed_resources:

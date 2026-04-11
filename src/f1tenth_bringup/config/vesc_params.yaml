@@ -45,11 +45,11 @@ ackermann_to_vesc:
     steering_angle_to_servo_offset:  0.5304
 
 # -- kart_controller: control algorithm parameters ----------------------------
-kart_controller:
+control_planning_node:
   ros__parameters:
-    speed_nominal:   1.0     # m/s -- start slow, increase after validation
-    kp_lateral:      0.8     # proportional gain on lateral error
-    kd_lateral:      0.05    # derivative gain on lateral error (damping)
-    kp_heading:      0.5     # proportional gain on heading error
+    speed_nominal:   0.0     # m/s -- starts stopped, increase after validation
+    kp_lateral:      2.0     # proportional gain on lateral error
+    kd_lateral:      0.08    # derivative gain on lateral error (damping)
+    kp_heading:      1.5     # proportional gain on heading error
     max_steer_angle: 0.34    # radians -- hard clamp (~20 degrees)
     min_quality:     0.4     # detection quality threshold (0-1)
