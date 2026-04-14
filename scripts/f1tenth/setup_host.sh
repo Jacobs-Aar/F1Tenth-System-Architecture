@@ -34,6 +34,11 @@ else
     echo "  -> Docker already installed: $(docker --version)"
 fi
 
+# -- 2b. Log in to Docker Hub ------------------------------------------------
+echo "[2b/5] Logging in to Docker Hub (required to pull stereolabs/zed image)..."
+echo "  If you don't have a Docker Hub account, create one at https://hub.docker.com"
+docker login
+
 # -- 3. Install Docker Compose plugin ----------------------------------------
 echo "[3/5] Installing Docker Compose plugin..."
 if ! docker compose version &> /dev/null; then

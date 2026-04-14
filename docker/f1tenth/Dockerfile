@@ -72,10 +72,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN rosdep init 2>/dev/null || true \
     && rosdep update --rosdistro humble
 
-# -- 5. Python dependencies ---------------------------------------------------
-RUN pip3 install --no-cache-dir numpy opencv-python-headless
-
-# -- 6. Build VESC + ZED wrapper into a SEPARATE permanent workspace -----------
+# -- 5. Build VESC + ZED wrapper into a SEPARATE permanent workspace -----------
 #    /opt/f1tenth_deps is baked into the image. The volume mount only touches
 #    /ros2_ws/src, so these dependencies are never overwritten or broken.
 RUN mkdir -p /opt/f1tenth_deps/src \
@@ -93,6 +90,9 @@ RUN mkdir -p /opt/f1tenth_deps/src \
     && rm -rf /opt/f1tenth_deps/build \
     && rm -rf /opt/f1tenth_deps/log \
     && rm -rf /var/lib/apt/lists/*
+
+# -- 6. Python Dependencies ---------------------------------------------------
+RUN pip3 install --no-cache-dir 'numpy<2' opencv-python-headless
 
 # -- 7. Prepare the user workspace --------------------------------------------
 RUN mkdir -p /ros2_ws/src
