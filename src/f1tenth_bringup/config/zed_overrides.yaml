@@ -1,0 +1,45 @@
+# =============================================================================
+# src/f1tenth_bringup/config/zed_overrides.yaml
+# =============================================================================
+# Overrides loaded INTO the zed_wrapper node's parameter namespace.  Contains
+# only the keys we want different from the stock zed-ros2-wrapper defaults.
+#
+# CRITICAL CHANGES VS STOCK
+#   pos_tracking.imu_fusion: true   ← was false; dramatically reduces drift
+#   pos_tracking.pos_tracking_mode: 'GEN_3'  (already stock, confirmed here)
+#   depth.min_depth:   0.20         (below ~0.2 m stereo is unreliable anyway)
+#   depth.point_cloud_freq: 15.0    (match launch-file request)
+#   depth.depth_mode: 'NEURAL'      (match launch-file request)
+#
+# Apply this by passing --ros-args --params-file <this path> to the zed_node
+# (see launch file).
+# =============================================================================
+/**:
+  ros__parameters:
+    pos_tracking:
+      pos_tracking_enabled: true
+      pos_tracking_mode: 'GEN_3'
+      # THE KEY FIX — fuse the ZED 2i's built-in IMU with visual odometry.
+      # Without this, rotation estimates drift fast on slow robots driving
+      # over repetitive textures like blue floor tape.
+      imu_fusion: true
+      publish_tf: true
+      publish_map_tf: true
+      area_memory: true
+      reset_odom_with_loop_closure: true
+      two_d_mode: true
+      fixed_z_value: 0.0
+      set_gravity_as_origin: true
+      publish_odom_pose: true
+
+    depth:
+      depth_mode: 'NEURAL'
+      min_depth: 0.20
+      max_depth: 10.0
+      point_cloud_freq: 15.0
+      point_cloud_res: 'COMPACT'
+      depth_confidence: 95
+      depth_texture_conf: 100
+      remove_saturated_areas: true
+      publish_point_cloud: true
+      publish_depth_map: true

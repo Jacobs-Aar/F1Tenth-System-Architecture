@@ -92,7 +92,7 @@ RUN mkdir -p /opt/f1tenth_deps/src \
     && rm -rf /var/lib/apt/lists/*
 
 # -- 6. Python Dependencies ---------------------------------------------------
-RUN pip3 install --no-cache-dir 'numpy<2' opencv-python-headless
+RUN pip3 install --no-cache-dir 'numpy<2' opencv-python-headless scipy
 
 # -- 7. Prepare the user workspace --------------------------------------------
 RUN mkdir -p /ros2_ws/src

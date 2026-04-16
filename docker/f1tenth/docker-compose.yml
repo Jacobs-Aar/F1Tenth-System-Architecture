@@ -18,6 +18,13 @@ services:
     volumes:
       - ../../src:/ros2_ws/src
       - ../../scripts:/ros2_ws/scripts
+
+      # Mount our tuned ZED config DIRECTORY over the installed one.
+      # Directory-to-directory mounts work fine with Docker overlay2.
+      # Edit src/f1tenth_bringup/config/zed_config/common_stereo.yaml
+      # to change tracking settings — takes effect on next docker compose up.
+      - ../../src/f1tenth_bringup/config/zed_config:/opt/f1tenth_deps/install/zed_wrapper/share/zed_wrapper/config:ro
+
       - zed_resources:/usr/local/zed/resources
 
     network_mode: "host"

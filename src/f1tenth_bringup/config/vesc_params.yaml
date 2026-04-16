@@ -1,55 +1,52 @@
 # =============================================================================
 # config/vesc_params.yaml
 # =============================================================================
-# F1Tenth VESC driver configuration.
-# All values marked !! CALIBRATE !! MUST be measured on the physical car.
+# F1Tenth VESC + controller config.
 #
-# How to calibrate speed_to_erpm_gain:
-#   1. Command the car at 1.0 m/s via /drive
-#   2. Read ERPM from /sensors/core (vesc_driver topic)
-#   3. speed_to_erpm_gain = measured_erpm / 1.0
-#
-# How to calibrate steering:
-#   1. Command 0 rad steering -> adjust offset so wheels are straight
-#   2. Command max physical steer -> adjust gain so value matches real angle
+# CHANGES
+#   - drive_topic added (default "ackermann_cmd", matching vesc_ackermann).
+#     This is how the steering command actually reaches the servo.
+#   - max_steer_angle 0.40 rad (physical hardware limit; needed to make the
+#     tight 0.45 m inner-radius turn).
 # =============================================================================
 
-# -- vesc_driver: low-level VESC serial communication -------------------------
+# -- vesc_driver -------------------------------------------------------------
 vesc_driver:
   ros__parameters:
-    port: /dev/ttyACM0        # USB port to VESC -- confirm with: ls /dev/ttyACM*
+    port: /dev/ttyACM0
     duty_cycle_min: -1.0
     duty_cycle_max:  1.0
     current_min: -100.0
     current_max:  100.0
     brake_min: 0.0
     brake_max: 100000.0
-    speed_min: -10000.0       # ERPM limits (safety bounds)
+    speed_min: -10000.0
     speed_max:  10000.0
     position_min: 0.0
     position_max: 100.0
     servo_min: 0.0
     servo_max: 1.0
 
-# -- ackermann_to_vesc: converts /drive -> VESC speed + servo -----------------
+# -- ackermann_to_vesc -------------------------------------------------------
 ackermann_to_vesc:
   ros__parameters:
-    # !! CALIBRATE !!  ERPM per m/s  (typical F1Tenth: ~4614)
     speed_to_erpm_gain:   4614.0
     speed_to_erpm_offset: 0.0
-
-    # !! CALIBRATE !!  Servo units per radian of steering angle
-    # Negative gain = servo increases as steering angle decreases (common)
     steering_angle_to_servo_gain:   -1.2135
-    # Servo value for straight-ahead (0.5 = mid-range)
     steering_angle_to_servo_offset:  0.5304
 
-# -- kart_controller: control algorithm parameters ----------------------------
+# -- kart_controller ---------------------------------------------------------
 control_planning_node:
   ros__parameters:
-    speed_nominal:   0.0     # m/s -- starts stopped, increase after validation
-    kp_lateral:      2.0     # proportional gain on lateral error
-    kd_lateral:      0.08    # derivative gain on lateral error (damping)
-    kp_heading:      1.5     # proportional gain on heading error
-    max_steer_angle: 0.34    # radians -- hard clamp (~20 degrees)
-    min_quality:     0.4     # detection quality threshold (0-1)
+    controller_mode: "pure_pursuit"
+    drive_topic:     "ackermann_cmd"   # matches vesc_ackermann's subscription
+
+    speed_nominal:    0.0        # start stopped
+    wheelbase:        0.26       # metres — measure and update if different
+    max_steer_angle:  0.40       # radians (F1Tenth hw max ~23°)
+
+    kp_lateral:  2.0
+    kd_lateral:  0.08
+    kp_heading:  1.5
+
+    min_quality: 0.4
